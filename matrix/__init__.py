@@ -23,3 +23,4 @@ References
 
 from . import linear_system  # noqa: E402,F401
 from . import iterative_solvers  # noqa: E402,F401
+from . import presets  # noqa: E402,F401
