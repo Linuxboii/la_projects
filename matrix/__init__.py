@@ -26,3 +26,4 @@ from . import iterative_solvers  # noqa: E402,F401
 from . import presets  # noqa: E402,F401
 from . import plot_planes  # noqa: E402,F401
 from . import dashboard_helpers  # noqa: E402,F401
+from . import eigen  # noqa: E402,F401
