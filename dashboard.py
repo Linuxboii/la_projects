@@ -660,7 +660,6 @@ elif page == "LA — Iterative Convergence":
 # ============================================================================
 
 elif page == "LA — Eigen Explorer":
-    import numpy as np
     import pandas as pd
 
     from matrix.eigen import eig_decompose, power_iteration

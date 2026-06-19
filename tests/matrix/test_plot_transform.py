@@ -16,3 +16,11 @@ def test_transform_figure_adds_eigenvectors():
     fig = transform_figure(A_DIAG, show_eigen=True)
     # 2 cubes + 3 real eigenvector arrows
     assert len(fig.data) == 5
+
+
+def test_transform_figure_skips_complex_eigenvectors():
+    # A 2D rotation block embedded in 3D: eigenvalues are ±i (complex) and 2 (real).
+    A_rot = [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 2.0]]
+    fig = transform_figure(A_rot, show_eigen=True)
+    # 2 cube traces + only the single REAL eigenvector arrow (complex pair skipped)
+    assert len(fig.data) == 3

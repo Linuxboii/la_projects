@@ -17,7 +17,6 @@ convergence (or divergence) can be visualised.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 
