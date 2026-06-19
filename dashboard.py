@@ -104,6 +104,7 @@ page = st.sidebar.selectbox(
         "Lyapunov Exponent",
         "LA — System Solver",
         "LA — Iterative Convergence",
+        "LA — Eigen Explorer",
     ],
     help="Select which chaos phenomenon to explore.",
 )
@@ -652,6 +653,53 @@ elif page == "LA — Iterative Convergence":
     table["residual"] = res.residuals
     table.index.name = "iteration"
     st.dataframe(table, use_container_width=True)
+
+
+# ============================================================================
+# Page — Linear Algebra: Eigen Explorer
+# ============================================================================
+
+elif page == "LA — Eigen Explorer":
+    import numpy as np
+    import pandas as pd
+
+    from matrix.eigen import eig_decompose, power_iteration
+    from matrix.plot_transform import transform_figure
+
+    st.header("Linear Algebra — Eigen Explorer")
+    st.markdown(
+        r"""
+        A matrix transforms 3-space. **Eigenvectors** are the directions that
+        are only stretched (by the **eigenvalue**), not rotated. Edit the
+        matrix and watch the unit cube deform; the red arrows are the
+        eigenvectors.
+        """
+    )
+
+    default = pd.DataFrame(
+        [[2.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.5]],
+        columns=["c1", "c2", "c3"],
+    )
+    edited = st.data_editor(default, key="eigen_matrix", use_container_width=True)
+    A = edited.to_numpy(dtype=float)
+
+    values, vectors = eig_decompose(A)
+    st.subheader("Eigenvalues")
+    st.write(", ".join(f"{v:.3f}" for v in values))
+
+    show_eigen = st.sidebar.checkbox("Show eigenvectors", value=True)
+    st.plotly_chart(transform_figure(A, show_eigen=show_eigen), use_container_width=True)
+
+    st.subheader("Power iteration → dominant eigenvector")
+    max_iter = st.sidebar.slider("Power-iteration steps", 5, 100, 25)
+    res = power_iteration(A, max_iter=max_iter)
+    st.write(
+        f"Dominant eigenvalue ≈ **{res.eigenvalue:.4f}** "
+        f"(converged={res.converged} in {res.iterations} iterations)"
+    )
+    est = pd.DataFrame({"eigenvalue estimate": res.eigenvalue_estimates})
+    est.index.name = "iteration"
+    st.line_chart(est)
 
 
 # ============================================================================
