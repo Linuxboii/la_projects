@@ -102,6 +102,8 @@ page = st.sidebar.selectbox(
         "Logistic Time Series",
         "Bifurcation Diagram",
         "Lyapunov Exponent",
+        "LA — System Solver",
+        "LA — Iterative Convergence",
     ],
     help="Select which chaos phenomenon to explore.",
 )
@@ -525,6 +527,131 @@ elif page == "Lyapunov Exponent":
         is "unpredictable".
         """
     )
+
+
+# ============================================================================
+# Page — Linear Algebra: System Solver
+# ============================================================================
+
+elif page == "LA — System Solver":
+    import numpy as np
+    import pandas as pd
+
+    from matrix.presets import list_presets, get_preset, PRESETS
+    from matrix.linear_system import (
+        classify_system, solve_inverse, solve_cramer, solve_gaussian,
+        SingularMatrixError,
+    )
+    from matrix.plot_planes import plane_figure
+    from matrix.dashboard_helpers import system_from_editor
+
+    st.header("Linear Algebra — System Solver")
+    st.markdown(
+        r"""
+        Each equation $a x + b y + c z = d$ is a **plane**. The solution of the
+        system is where the three planes meet. Edit the coefficients or pick a
+        preset, and compare three exact solving methods.
+        """
+    )
+
+    preset = st.sidebar.selectbox("Preset system", list_presets())
+    st.sidebar.caption(PRESETS[preset]["note"])
+    A0, b0 = get_preset(preset)
+
+    df = pd.DataFrame(
+        np.column_stack([A0, b0]), columns=["x", "y", "z", "= b"]
+    )
+    edited = st.data_editor(df, key=f"sys_{preset}", use_container_width=True)
+    A, b = system_from_editor(edited)
+
+    info = classify_system(A, b)
+    st.subheader(f"Solution type: **{info['type'].upper()}**")
+    st.write(
+        f"rank(A) = {info['rank_A']}, rank([A|b]) = {info['rank_Ab']}, "
+        f"det(A) = {info['det']:.3f}"
+    )
+
+    solution = None
+    if info["type"] == "unique":
+        try:
+            x_inv = solve_inverse(A, b)
+            x_cra, _ = solve_cramer(A, b)
+            x_gau, _ = solve_gaussian(A, b)
+            solution = x_gau
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Inverse method", f"({x_inv[0]:.3f}, {x_inv[1]:.3f}, {x_inv[2]:.3f})")
+            c2.metric("Cramer's rule", f"({x_cra[0]:.3f}, {x_cra[1]:.3f}, {x_cra[2]:.3f})")
+            c3.metric("Gaussian elim.", f"({x_gau[0]:.3f}, {x_gau[1]:.3f}, {x_gau[2]:.3f})")
+        except SingularMatrixError as exc:
+            st.warning(f"Direct solve failed: {exc}")
+    else:
+        st.info("No single point solution — see the plane arrangement below.")
+
+    st.plotly_chart(plane_figure(A, b, solution=solution), use_container_width=True)
+
+
+# ============================================================================
+# Page — Linear Algebra: Iterative Convergence
+# ============================================================================
+
+elif page == "LA — Iterative Convergence":
+    import numpy as np
+    import pandas as pd
+
+    from matrix.presets import list_presets, get_preset, PRESETS
+    from matrix.iterative_solvers import jacobi, gauss_seidel, sor, is_diagonally_dominant
+    from matrix.plot_planes import convergence_figure, residual_figure
+    from matrix.dashboard_helpers import system_from_editor
+
+    st.header("Linear Algebra — Iterative Convergence")
+    st.markdown(
+        r"""
+        Iterative methods start from a guess and **step toward** the solution.
+        Watch each iterate walk through 3-space toward the intersection — and
+        see how a non-diagonally-dominant matrix makes them diverge instead.
+        """
+    )
+
+    preset = st.sidebar.selectbox(
+        "Preset system", list_presets(),
+        index=list_presets().index("Diagonally dominant (converges)"),
+    )
+    st.sidebar.caption(PRESETS[preset]["note"])
+    method_name = st.sidebar.selectbox("Method", ["Jacobi", "Gauss-Seidel", "SOR"])
+    max_iter = st.sidebar.slider("Iterations", min_value=5, max_value=100, value=25)
+    omega = st.sidebar.slider("SOR ω", 0.5, 1.9, 1.1, 0.1) if method_name == "SOR" else 1.1
+
+    A0, b0 = get_preset(preset)
+    df = pd.DataFrame(np.column_stack([A0, b0]), columns=["x", "y", "z", "= b"])
+    edited = st.data_editor(df, key=f"iter_{preset}", use_container_width=True)
+    A, b = system_from_editor(edited)
+
+    dominant = is_diagonally_dominant(A)
+    st.write(f"Diagonally dominant: **{dominant}** "
+             f"({'methods should converge' if dominant else 'methods may diverge'})")
+
+    if method_name == "Jacobi":
+        res = jacobi(A, b, max_iter=max_iter)
+    elif method_name == "Gauss-Seidel":
+        res = gauss_seidel(A, b, max_iter=max_iter)
+    else:
+        res = sor(A, b, omega=omega, max_iter=max_iter)
+
+    st.write(
+        f"**Converged: {res.converged}** after {res.iterations} iterations; "
+        f"final residual = {res.residuals[-1]:.2e}"
+    )
+
+    col_a, col_b = st.columns([3, 2])
+    with col_a:
+        st.plotly_chart(convergence_figure(A, b, res.history), use_container_width=True)
+    with col_b:
+        st.plotly_chart(residual_figure(res.residuals), use_container_width=True)
+
+    table = pd.DataFrame(res.history, columns=["x", "y", "z"])
+    table["residual"] = res.residuals
+    table.index.name = "iteration"
+    st.dataframe(table, use_container_width=True)
 
 
 # ============================================================================
