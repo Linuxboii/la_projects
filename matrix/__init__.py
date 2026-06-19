@@ -20,3 +20,5 @@ References
 - Strang, G. (2016). *Introduction to Linear Algebra*, 5th ed.
 - Saad, Y. (2003). *Iterative Methods for Sparse Linear Systems*, 2nd ed.
 """
+
+from . import linear_system  # noqa: E402,F401
